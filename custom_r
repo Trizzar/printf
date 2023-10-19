@@ -23,6 +23,25 @@ void print_nonprintable(char *str) {
     }
 }
 
+void reverse_string(char *str) {
+    int length = strlen(str);
+    for (int i = 0, j = length - 1; i < j; i++, j--) {
+        char temp = str[i];
+        str[i] = str[j];
+        str[j] = temp;
+    }
+}
+
+void rot13(char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        char c = str[i];
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+            char base = (c >= 'A' && c <= 'Z') ? 'A' : 'a';
+            str[i] = (c - base + 13) % 26 + base;
+        }
+    }
+}
+
 int _printf(const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -41,35 +60,198 @@ int _printf(const char *format, ...) {
             int leave_space = 0;
             int use_prefix = 0;
             int width = 0; // Field width
+            int precision = -1; // Precision (default -1 means not specified)
+            int zero_padding = 0;
+            int left_justified = 0;
 
-            while (*format == '+' || *format == ' ' || *format == '#' || (*format >= '0' && *format <= '9')) {
+            while (*format == '+' || *format == ' ' || *format == '#' || *format == '0' || *format == '-' || (*format >= '0' && *format <= '9') || *format == '.') {
                 if (*format == '+') {
                     force_sign = 1;
                 } else if (*format == ' ') {
                     leave_space = 1;
                 } else if (*format == '#') {
                     use_prefix = 1;
+                } else if (*format == '0') {
+                    zero_padding = 1;
+                } else if (*format == '-') {
+                    left_justified = 1;
                 } else if (*format >= '0' && *format <= '9') {
-                    // Parse the field width
                     width = width * 10 + (*format - '0');
+                } else if (*format == '.') {
+                    format++;
+                    if (*format == '*') {
+                        precision = va_arg(args, int);
+                    } else {
+                        precision = 0;
+                        while (*format >= '0' && *format <= '9') {
+                            precision = precision * 10 + (*format - '0');
+                            format++;
+                        }
+                        format--;
+                    }
                 }
                 format++;
             }
 
             if (*format == 'c') {
-                // Handle character
-                char c = va_arg(args, int); // char is promoted to int
+                char c = va_arg(args, int);
                 *bufptr = c;
                 bufptr++;
                 count++;
             } else if (*format == 's') {
-                // Handle string
                 char *str = va_arg(args, char *);
                 if (str == NULL)
                     str = "(null)";
+                int len = (precision >= 0 && precision < strlen(str)) ? precision : strlen(str);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                strncpy(bufptr, str, len);
+                bufptr += len;
+                count += len;
+            } else if (*format == 'd' || *format == 'i') {
+                int num = va_arg(args, int);
+                if (force_sign && num >= 0) {
+                    *bufptr = '+';
+                    bufptr++;
+                } else if (!force_sign && leave_space && num >= 0) {
+                    *bufptr = ' ';
+                    bufptr++;
+                }
+                int len = snprintf(bufptr, 1024, "%d", num);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == 'u') {
+                unsigned int num = va_arg(args, unsigned int);
+                if (force_sign) {
+                    *bufptr = '+';
+                    bufptr++;
+                }
+                int len = snprintf(bufptr, 1024, "%u", num);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == 'o') {
+                unsigned int num = va_arg(args, unsigned int);
+                if (use_prefix && num != 0) {
+                    *bufptr = '0';
+                    bufptr++;
+                }
+                int len = snprintf(bufptr, 1024, "%o", num);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == 'x') {
+                unsigned int num = va_arg(args, unsigned int);
+                if (use_prefix && num != 0) {
+                    *bufptr = '0';
+                    bufptr++;
+                    *bufptr = 'x';
+                    bufptr++;
+                }
+                int len = snprintf(bufptr, 1024, "%x", num);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == 'X') {
+                unsigned int num = va_arg(args, unsigned int);
+                if (use_prefix && num != 0) {
+                    *bufptr = '0';
+                    bufptr++;
+                    *bufptr = 'X';
+                    bufptr++;
+                }
+                int len = snprintf(bufptr, 1024, "%X", num);
+                if (width > 0 and len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == 'S') {
+                char *str = va_arg(args, char *);
+                if (str == NULL)
+                    str = "(null)";
+                int len = (strlen(str) > precision && precision >= 0) ? precision : strlen(str);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                print_nonprintable(str);
+            } else if (*format == 'p') {
+                void *ptr = va_arg(args, void *);
+                int len = snprintf(bufptr, 1024, "%p", ptr);
+                if (width > 0 && len < width) {
+                    int padding = width - len;
+                    while (padding > 0) {
+                        *bufptr = zero_padding ? '0' : ' ';
+                        bufptr++;
+                        padding--;
+                        count++;
+                    }
+                }
+                bufptr += len;
+                count += len;
+            } else if (*format == '%') {
+                *bufptr = '%';
+                bufptr++;
+                count++;
+            } else if (*format == 'r') {
+                char *str = va_arg(args, char *);
+                if (str == NULL)
+                    str = "(null)";
+                reverse_string(str);
                 int len = strlen(str);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
                     int padding = width - len;
                     while (padding > 0) {
                         *bufptr = ' ';
@@ -81,121 +263,13 @@ int _printf(const char *format, ...) {
                 strncpy(bufptr, str, len);
                 bufptr += len;
                 count += len;
-            } else if (*format == 'd' || *format == 'i') {
-                // Handle integer
-                int num = va_arg(args, int);
-                if (force_sign && num >= 0) {
-                    *bufptr = '+';
-                    bufptr++;
-                } else if (!force_sign && leave_space && num >= 0) {
-                    *bufptr = ' ';
-                    bufptr++;
-                }
-                int len = snprintf(bufptr, 1024, "%d", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
-            } else if (*format == 'u') {
-                // Handle unsigned decimal
-                unsigned int num = va_arg(args, unsigned int);
-                if (force_sign) {
-                    *bufptr = '+';
-                    bufptr++;
-                }
-                int len = snprintf(bufptr, 1024, "%u", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
-            } else if (*format == 'o') {
-                // Handle octal
-                unsigned int num = va_arg(args, unsigned int);
-                if (use_prefix && num != 0) {
-                    *bufptr = '0';
-                    bufptr++;
-                }
-                int len = snprintf(bufptr, 1024, "%o", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
-            } else if (*format == 'x') {
-                // Handle lowercase hexadecimal
-                unsigned int num = va_arg(args, unsigned int);
-                if (use_prefix && num != 0) {
-                    *bufptr = '0';
-                    bufptr++;
-                    *bufptr = 'x';
-                    bufptr++;
-                }
-                int len = snprintf(bufptr, 1024, "%x", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
-            } else if (*format == 'X') {
-                // Handle uppercase hexadecimal
-                unsigned int num = va_arg(args, unsigned int);
-                if (use_prefix && num != 0) {
-                    *bufptr = '0';
-                    bufptr++;
-                    *bufptr = 'X';
-                    bufptr++;
-                }
-                int len = snprintf(bufptr, 1024, "%X", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
-            } else if (*format == 'S') {
-                // Handle custom specifier for strings
+            } else if (*format == 'R') {
                 char *str = va_arg(args, char *);
                 if (str == NULL)
                     str = "(null)";
-                int len = (strlen(str) > precision && precision >= 0) ? precision : strlen(str);
+                rot13(str);
+                int len = strlen(str);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
                     int padding = width - len;
                     while (padding > 0) {
                         *bufptr = ' ';
@@ -204,30 +278,10 @@ int _printf(const char *format, ...) {
                         count++;
                     }
                 }
-                print_nonprintable(str);
-            } else if (*format == 'p') {
-                // Handle pointer
-                void *ptr = va_arg(args, void *);
-                int len = snprintf(bufptr, 1024, "%p", ptr);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the pointer representation is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
+                strncpy(bufptr, str, len);
                 bufptr += len;
                 count += len;
-            } else if (*format == '%') {
-                // Handle %%
-                *bufptr = '%';
-                bufptr++;
-                count++;
             } else {
-                // Unknown conversion specifier, ignore it
                 *bufptr = '%';
                 bufptr++;
                 *bufptr = *format;
@@ -242,10 +296,8 @@ int _printf(const char *format, ...) {
         format++;
     }
 
-    // Ensure the buffer is null-terminated
     *bufptr = '\0';
 
-    // Write the buffer to stdout
     write(1, buffer, strlen(buffer));
 
     va_end(args);
@@ -254,18 +306,17 @@ int _printf(const char *format, ...) {
 }
 
 int main() {
-    char name[] = "John";
-    int age = 30;
-    char message[] = "Hello, \x02World\x07!";
-    void *ptr = &age;
+    char message[] = "Hello, World!";
+    char reversed_message[] = "dlroW ,olleH";
+    char rot13_message[] = "Uryyb, Jbeyq!";
 
-    int char_count = _printf("Hello, my name is %10s and I am %5d years old.\n", name, age);
+    int char_count = _printf("Original message: %s\n", message);
     printf("\nNumber of characters printed: %d\n", char_count);
 
-    char_count = _printf("Custom specifier S: %10S\n", message);
+    char_count = _printf("Reversed message: %r\n", reversed_message);
     printf("\nNumber of characters printed: %d\n", char_count);
 
-    char_count = _printf("Pointer address: %20p\n", ptr);
+    char_count = _printf("ROT13 message: %R\n", rot13_message);
     printf("\nNumber of characters printed: %d\n", char_count);
 
     return 0;

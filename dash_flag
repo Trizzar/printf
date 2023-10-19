@@ -41,17 +41,39 @@ int _printf(const char *format, ...) {
             int leave_space = 0;
             int use_prefix = 0;
             int width = 0; // Field width
+            int precision = -1; // Precision (default -1 means not specified)
+            int zero_padding = 0;
+            int left_justified = 0; // New flag for left-justified formatting
 
-            while (*format == '+' || *format == ' ' || *format == '#' || (*format >= '0' && *format <= '9')) {
+            while (*format == '+' || *format == ' ' || *format == '#' || *format == '0' || *format == '-' || (*format >= '0' && *format <= '9') || *format == '.') {
                 if (*format == '+') {
                     force_sign = 1;
                 } else if (*format == ' ') {
                     leave_space = 1;
                 } else if (*format == '#') {
                     use_prefix = 1;
+                } else if (*format == '0') {
+                    zero_padding = 1;
+                } else if (*format == '-') {
+                    left_justified = 1; // Set the left-justified flag
                 } else if (*format >= '0' && *format <= '9') {
                     // Parse the field width
                     width = width * 10 + (*format - '0');
+                } else if (*format == '.') {
+                    // Precision specifier found
+                    format++; // Move past the dot
+                    if (*format == '*') {
+                        // Precision is passed as an argument
+                        precision = va_arg(args, int);
+                    } else {
+                        // Precision is a specific number
+                        precision = 0;
+                        while (*format >= '0' && *format <= '9') {
+                            precision = precision * 10 + (*format - '0');
+                            format++;
+                        }
+                        format--; // Move back one character for consistency
+                    }
                 }
                 format++;
             }
@@ -63,16 +85,16 @@ int _printf(const char *format, ...) {
                 bufptr++;
                 count++;
             } else if (*format == 's') {
-                // Handle string
+                // Handle string with precision
                 char *str = va_arg(args, char *);
                 if (str == NULL)
                     str = "(null)";
-                int len = strlen(str);
+                int len = (precision >= 0 && precision < strlen(str)) ? precision : strlen(str);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
+                    // If the field width is specified and the string is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -93,10 +115,10 @@ int _printf(const char *format, ...) {
                 }
                 int len = snprintf(bufptr, 1024, "%d", num);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
+                    // If the field width is specified and the number is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -113,10 +135,10 @@ int _printf(const char *format, ...) {
                 }
                 int len = snprintf(bufptr, 1024, "%u", num);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
+                    // If the field width is specified and the number is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -133,10 +155,10 @@ int _printf(const char *format, ...) {
                 }
                 int len = snprintf(bufptr, 1024, "%o", num);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
+                    // If the field width is specified and the number is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -155,10 +177,10 @@ int _printf(const char *format, ...) {
                 }
                 int len = snprintf(bufptr, 1024, "%x", num);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
+                    // If the field width is specified and the number is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -176,11 +198,11 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%X", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
+                if (width > 0 and len < width) {
+                    // If the field width is specified and the number is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -195,10 +217,10 @@ int _printf(const char *format, ...) {
                     str = "(null)";
                 int len = (strlen(str) > precision && precision >= 0) ? precision : strlen(str);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
+                    // If the field width is specified and the string is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;
@@ -210,10 +232,10 @@ int _printf(const char *format, ...) {
                 void *ptr = va_arg(args, void *);
                 int len = snprintf(bufptr, 1024, "%p", ptr);
                 if (width > 0 && len < width) {
-                    // If the field width is specified and the pointer representation is shorter, pad with spaces
+                    // If the field width is specified and the pointer representation is shorter, pad with '0' or spaces based on the '0' flag
                     int padding = width - len;
                     while (padding > 0) {
-                        *bufptr = ' ';
+                        *bufptr = zero_padding ? '0' : ' ';
                         bufptr++;
                         padding--;
                         count++;

@@ -1,4 +1,5 @@
-#include <stdio.h>
+
+i#include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
@@ -41,8 +42,9 @@ int _printf(const char *format, ...) {
             int leave_space = 0;
             int use_prefix = 0;
             int width = 0; // Field width
+            int precision = -1; // Precision (default -1 means not specified)
 
-            while (*format == '+' || *format == ' ' || *format == '#' || (*format >= '0' && *format <= '9')) {
+            while (*format == '+' || *format == ' ' || *format == '#' || (*format >= '0' && *format <= '9') || *format == '.') {
                 if (*format == '+') {
                     force_sign = 1;
                 } else if (*format == ' ') {
@@ -52,6 +54,21 @@ int _printf(const char *format, ...) {
                 } else if (*format >= '0' && *format <= '9') {
                     // Parse the field width
                     width = width * 10 + (*format - '0');
+                } else if (*format == '.') {
+                    // Precision specifier found
+                    format++; // Move past the dot
+                    if (*format == '*') {
+                        // Precision is passed as an argument
+                        precision = va_arg(args, int);
+                    } else {
+                        // Precision is a specific number
+                        precision = 0;
+                        while (*format >= '0' && *format <= '9') {
+                            precision = precision * 10 + (*format - '0');
+                            format++;
+                        }
+                        format--; // Move back one character for consistency
+                    }
                 }
                 format++;
             }
@@ -63,21 +80,11 @@ int _printf(const char *format, ...) {
                 bufptr++;
                 count++;
             } else if (*format == 's') {
-                // Handle string
+                // Handle string with precision
                 char *str = va_arg(args, char *);
                 if (str == NULL)
                     str = "(null)";
-                int len = strlen(str);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
+                int len = (precision >= 0 && precision < strlen(str)) ? precision : strlen(str);
                 strncpy(bufptr, str, len);
                 bufptr += len;
                 count += len;
@@ -92,16 +99,6 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%d", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
                 bufptr += len;
                 count += len;
             } else if (*format == 'u') {
@@ -112,16 +109,6 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%u", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
                 bufptr += len;
                 count += len;
             } else if (*format == 'o') {
@@ -132,16 +119,6 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%o", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
                 bufptr += len;
                 count += len;
             } else if (*format == 'x') {
@@ -154,16 +131,6 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%x", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
                 bufptr += len;
                 count += len;
             } else if (*format == 'X') {
@@ -176,16 +143,6 @@ int _printf(const char *format, ...) {
                     bufptr++;
                 }
                 int len = snprintf(bufptr, 1024, "%X", num);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the number is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
                 bufptr += len;
                 count += len;
             } else if (*format == 'S') {
@@ -193,34 +150,8 @@ int _printf(const char *format, ...) {
                 char *str = va_arg(args, char *);
                 if (str == NULL)
                     str = "(null)";
-                int len = (strlen(str) > precision && precision >= 0) ? precision : strlen(str);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the string is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
+                int len = (precision >= 0) ? precision : strlen(str);
                 print_nonprintable(str);
-            } else if (*format == 'p') {
-                // Handle pointer
-                void *ptr = va_arg(args, void *);
-                int len = snprintf(bufptr, 1024, "%p", ptr);
-                if (width > 0 && len < width) {
-                    // If the field width is specified and the pointer representation is shorter, pad with spaces
-                    int padding = width - len;
-                    while (padding > 0) {
-                        *bufptr = ' ';
-                        bufptr++;
-                        padding--;
-                        count++;
-                    }
-                }
-                bufptr += len;
-                count += len;
             } else if (*format == '%') {
                 // Handle %%
                 *bufptr = '%';
@@ -257,15 +188,11 @@ int main() {
     char name[] = "John";
     int age = 30;
     char message[] = "Hello, \x02World\x07!";
-    void *ptr = &age;
 
-    int char_count = _printf("Hello, my name is %10s and I am %5d years old.\n", name, age);
+    int char_count = _printf("Hello, my name is %s and I am %d years old.\n", name, age);
     printf("\nNumber of characters printed: %d\n", char_count);
 
-    char_count = _printf("Custom specifier S: %10S\n", message);
-    printf("\nNumber of characters printed: %d\n", char_count);
-
-    char_count = _printf("Pointer address: %20p\n", ptr);
+    char_count = _printf("Custom specifier S: %10.5S\n", message);
     printf("\nNumber of characters printed: %d\n", char_count);
 
     return 0;
