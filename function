@@ -1,0 +1,66 @@
+#include <stdio.h>
+#include <stdarg.h>
+
+int _printf(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int count = 0; // To keep track of the number of characters printed
+
+    while (*format) {
+        if (*format == '%') {
+            format++; // Move past '%'
+            if (*format == '\0') // Ensure the format string doesn't end with '%'
+                break;
+
+            if (*format == 'c') {
+                // Handle character
+                char c = va_arg(args, int); // char is promoted to int
+                putchar(c);
+                count++;
+            } else if (*format == 's') {
+                // Handle string
+                char *str = va_arg(args, char *);
+                if (str == NULL)
+                    str = "(null)";
+                while (*str) {
+                    putchar(*str);
+                    count++;
+                    str++;
+                }
+            } else if (*format == 'd' || *format == 'i') {
+                // Handle integer
+                int num = va_arg(args, int);
+                printf("%d", num);
+                count++;
+            } else if (*format == '%') {
+                // Handle %%
+                putchar('%');
+                count++;
+            } else {
+                // Unknown conversion specifier, ignore it
+                putchar('%');
+                putchar(*format);
+                count += 2;
+            }
+        } else {
+            putchar(*format);
+            count++;
+        }
+        format++;
+    }
+
+    va_end(args);
+
+    return count;
+}
+
+int main() {
+    char name[] = "John";
+    int age = 30;
+
+    int char_count = _printf("Hello, my name is %s and I am %d years old.%%\n", name, age);
+    printf("\nNumber of characters printed: %d\n", char_count);
+
+    return 0;
+}

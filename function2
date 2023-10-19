@@ -1,0 +1,103 @@
+#include <stdio.h>
+#include <stdarg.h>
+
+void print_binary(unsigned int num) {
+    if (num > 1) {
+        print_binary(num / 2);
+    }
+    putchar('0' + num % 2);
+}
+
+int _printf(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int count = 0; // To keep track of the number of characters printed
+
+    while (*format) {
+        if (*format == '%') {
+            format++; // Move past '%'
+            if (*format == '\0') // Ensure the format string doesn't end with '%'
+                break;
+
+            if (*format == 'c') {
+                // Handle character
+                char c = va_arg(args, int); // char is promoted to int
+                putchar(c);
+                count++;
+            } else if (*format == 's') {
+                // Handle string
+                char *str = va_arg(args, char *);
+                if (str == NULL)
+                    str = "(null)";
+                while (*str) {
+                    putchar(*str);
+                    count++;
+                    str++;
+                }
+            } else if (*format == 'd' || *format == 'i') {
+                // Handle integer
+                int num = va_arg(args, int);
+                printf("%d", num);
+                count++;
+            } else if (*format == 'b') {
+                // Handle binary
+                unsigned int num = va_arg(args, unsigned int);
+                print_binary(num);
+                count++; // Count as one character
+            } else if (*format == 'u') {
+                // Handle unsigned decimal
+                unsigned int num = va_arg(args, unsigned int);
+                printf("%u", num);
+                count++;
+            } else if (*format == 'o') {
+                // Handle octal
+                unsigned int num = va_arg(args, unsigned int);
+                printf("%o", num);
+                count++;
+            } else if (*format == 'x') {
+                // Handle lowercase hexadecimal
+                unsigned int num = va_arg(args, unsigned int);
+                printf("%x", num);
+                count++;
+            } else if (*format == 'X') {
+                // Handle uppercase hexadecimal
+                unsigned int num = va_arg(args, unsigned int);
+                printf("%X", num);
+                count++;
+            } else if (*format == '%') {
+                // Handle %%
+                putchar('%');
+                count++;
+            } else {
+                // Unknown conversion specifier, ignore it
+                putchar('%');
+                putchar(*format);
+                count += 2;
+            }
+        } else {
+            putchar(*format);
+            count++;
+        }
+        format++;
+    }
+
+    va_end(args);
+
+    return count;
+}
+
+int main() {
+    char name[] = "John";
+    int age = 30;
+    unsigned int binary_num = 18;
+    unsigned int decimal_num = 42;
+    unsigned int octal_num = 075;
+    unsigned int hex_num = 0xABCD;
+
+    int char_count = _printf("Hello, my name is %s and I am %d years old. My numbers are: %b, %u, %o, %x, %X.%%\n", name, age, binary_num, decimal_num, octal_num, hex_num);
+    printf("\nNumber of characters printed: %d\n", char_count);
+
+    return 0;
+}
+
